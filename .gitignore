@@ -39,3 +39,6 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# 예시 환경 변수 파일은 공유 (실제 키가 없는 파일)
+!.env.local.example

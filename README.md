@@ -37,8 +37,11 @@ cp .env.local.example .env.local
 
 ```
 NEXT_PUBLIC_SUPABASE_URL=https://xxxxxxxxxxxx.supabase.co
-NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your-publishable-or-anon-key
+SUPABASE_SERVICE_ROLE_KEY=your-secret-key
 ```
+
+`SUPABASE_SERVICE_ROLE_KEY`는 서버(API Route)에서만 쓰는 비밀 키입니다. RLS가 켜져 있어 이 키가 없으면 저장/조회가 실패합니다.
 
 ### 4. 개발 서버 실행
 

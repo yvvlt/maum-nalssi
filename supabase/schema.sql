@@ -24,7 +24,7 @@ begin
   new.updated_at = now();
   return new;
 end;
-$$ language plpgsql;
+$$ language plpgsql set search_path = '';
 
 drop trigger if exists set_mood_records_updated_at on public.mood_records;
 create trigger set_mood_records_updated_at
@@ -32,6 +32,7 @@ create trigger set_mood_records_updated_at
   for each row
   execute function public.set_updated_at();
 
--- 로그인 기능이 없는 개인/과제용 프로젝트이므로 RLS를 비활성화합니다.
--- 여러 명이 함께 쓰는 배포 환경이라면 RLS를 켜고 적절한 정책을 추가하세요.
-alter table public.mood_records disable row level security;
+-- RLS를 켜서 브라우저용 anon/publishable 키로는 테이블에 접근하지 못하게 합니다.
+-- 이 앱은 Next.js API Route(서버)가 SUPABASE_SERVICE_ROLE_KEY로 접근하므로
+-- 별도 정책(policy) 없이도 정상 동작합니다.
+alter table public.mood_records enable row level security;
