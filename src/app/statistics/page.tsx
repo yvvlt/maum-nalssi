@@ -60,7 +60,7 @@ export default function StatisticsPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between rounded-2xl border border-slate-200 bg-white p-4">
+      <div className="flex items-center justify-between rounded-2xl border border-white/70 bg-white/80 backdrop-blur-sm p-4">
         <button
           type="button"
           onClick={() => setCursor(new Date(year, month - 1, 1))}
@@ -87,13 +87,13 @@ export default function StatisticsPage() {
       ) : (
         <>
           <div className="grid grid-cols-2 gap-3">
-            <div className="rounded-2xl border border-slate-200 bg-white p-4">
+            <div className="rounded-2xl border border-white/70 bg-white/80 backdrop-blur-sm p-4">
               <p className="text-xs text-slate-400">총 기록 일수</p>
               <p className="mt-1 text-2xl font-semibold">
                 {stats.totalDays}일
               </p>
             </div>
-            <div className="rounded-2xl border border-slate-200 bg-white p-4">
+            <div className="rounded-2xl border border-white/70 bg-white/80 backdrop-blur-sm p-4">
               <p className="text-xs text-slate-400">평균 기분</p>
               <p className="mt-1 text-2xl font-semibold">
                 {stats.averageMoodScore.toFixed(1)} / 5
@@ -102,7 +102,7 @@ export default function StatisticsPage() {
           </div>
 
           {stats.topWeather && (
-            <div className="rounded-2xl border border-slate-200 bg-white p-4 text-center">
+            <div className="rounded-2xl border border-white/70 bg-white/80 backdrop-blur-sm p-4 text-center">
               <p className="text-xs text-slate-400">가장 많았던 마음날씨</p>
               <p className="mt-1 text-3xl">
                 {WEATHER_MAP[stats.topWeather].emoji}
@@ -113,7 +113,7 @@ export default function StatisticsPage() {
             </div>
           )}
 
-          <div className="space-y-2 rounded-2xl border border-slate-200 bg-white p-4">
+          <div className="space-y-2 rounded-2xl border border-white/70 bg-white/80 backdrop-blur-sm p-4">
             <p className="text-xs text-slate-400">마음날씨 분포</p>
             {WEATHER_OPTIONS.map((option) => {
               const count = stats.weatherCounts[option.value] ?? 0;
@@ -135,7 +135,7 @@ export default function StatisticsPage() {
             })}
           </div>
 
-          <div className="space-y-2 rounded-2xl border border-slate-200 bg-white p-4">
+          <div className="space-y-2 rounded-2xl border border-white/70 bg-white/80 backdrop-blur-sm p-4">
             <p className="text-xs text-slate-400">최근 감정 변화</p>
             <div className="flex items-end gap-2">
               {stats.recentTrend.map((r) => (

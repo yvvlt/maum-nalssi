@@ -56,13 +56,13 @@ npm run dev
 ```
 src/
   app/
-    page.tsx              # HOME - 오늘의 마음날씨 기록
-    calendar/page.tsx      # CALENDAR - 월간 캘린더
+    page.tsx              # HOME - 월간 캘린더 (날짜를 눌러 기록/수정/삭제)
+    calendar/page.tsx      # 예전 /calendar 주소 → 홈으로 이동
     history/page.tsx       # HISTORY - 전체 기록 / 필터 / 수정 / 삭제
     statistics/page.tsx    # STATISTICS - 월간 통계
     api/moods/route.ts         # GET(목록) / POST(생성)
     api/moods/[id]/route.ts    # GET(단건) / PUT(수정) / DELETE(삭제)
-  components/           # WeatherPicker, MoodScoreSelector, Nav, MoodCard
+  components/           # MoodModal, WeatherPicker, MoodScoreSelector, Nav, MoodCard, SkyBackground
   lib/
     constants.ts         # 날씨 종류, 감정 점수 라벨, 테마
     types.ts              # MoodRecord 타입
@@ -73,12 +73,14 @@ supabase/schema.sql     # mood_records 테이블 생성 SQL
 
 ## 현재 구현된 기능
 
-- 오늘의 마음날씨 기록 (날씨 선택 + 감정 점수 1~5 + 한 줄 메모)
-- 하루 1개 기록 제한 및 중복 확인 (이미 기록이 있으면 수정으로 전환)
-- 월간 캘린더에서 날짜별 마음날씨 아이콘 확인
-- 전체 기록 목록, 날씨별 필터, 날짜/메모 검색, 수정, 삭제
+- 홈 화면이 월간 캘린더: 날짜별 마음날씨 아이콘 확인, 이전/다음 달 이동, "오늘" 버튼
+- 날짜 칸을 누르면 팝업에서 마음날씨 선택 + 기분 1~5점 + 한 줄 메모 기록 (이미 기록한 날은 수정/삭제)
+- 오늘까지만 기록 가능 (미래 날짜는 막힘), 지난 날짜는 나중에 채우거나 수정 가능
+- 하루 1개 기록 제한 및 중복 확인
+- 전체 기록 목록, 날씨별 필터, 날짜/메모 검색, 수정, 삭제 (History)
 - 월간 통계 (총 기록일수, 날씨별 분포, 가장 많은 마음날씨, 평균 기분, 최근 감정 변화)
-- 선택한 마음날씨에 따라 홈 화면 배경 테마 변경
+- 선택한 마음날씨에 따라 입력 팝업 배경 테마 변경
+- 구름이 천천히 흘러가는 하늘 그림 배경
 
 ## 다음에 하면 좋은 것들 (TODO)
 

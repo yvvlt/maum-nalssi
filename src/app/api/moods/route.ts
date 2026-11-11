@@ -60,6 +60,17 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // 미래 날짜는 기록할 수 없다. (서버는 UTC 기준이라 한국 시간 대비 하루 여유를 둔다)
+    const latestAllowed = new Date(Date.now() + 24 * 60 * 60 * 1000)
+      .toISOString()
+      .slice(0, 10);
+    if (body.date > latestAllowed) {
+      return NextResponse.json(
+        { error: "미래 날짜에는 기록할 수 없습니다." },
+        { status: 400 }
+      );
+    }
+
     // 기능 5: 날짜 중복 확인 - 하루에 하나의 기록만 허용
     const { data: existing, error: existingError } = await supabase
       .from("mood_records")

@@ -1,172 +1,196 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import Link from "next/link";
-import { WeatherPicker } from "@/components/WeatherPicker";
-import { MoodScoreSelector } from "@/components/MoodScoreSelector";
-import { DEFAULT_THEME, WEATHER_MAP, type Weather } from "@/lib/constants";
-import { toDateStr, formatDisplayDate } from "@/lib/date";
+import { useEffect, useMemo, useState } from "react";
+import { MoodModal } from "@/components/MoodModal";
+import { WEATHER_MAP } from "@/lib/constants";
+import { toDateStr, toMonthStr } from "@/lib/date";
 import type { MoodRecord } from "@/lib/types";
+
+const WEEKDAYS = ["일", "월", "화", "수", "목", "금", "토"];
+
+function buildCalendarGrid(year: number, month: number) {
+  // month: 0-indexed (Date 기준)
+  const startWeekday = new Date(year, month, 1).getDay();
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+
+  const cells: (number | null)[] = [];
+  for (let i = 0; i < startWeekday; i += 1) cells.push(null);
+  for (let d = 1; d <= daysInMonth; d += 1) cells.push(d);
+  while (cells.length % 7 !== 0) cells.push(null);
+  return cells;
+}
 
 export default function HomePage() {
   const today = toDateStr(new Date());
+  const todayMonth = today.slice(0, 7);
 
+  const [cursor, setCursor] = useState(() => new Date());
+  const [records, setRecords] = useState<MoodRecord[]>([]);
   const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
-  const [existing, setExisting] = useState<MoodRecord | null>(null);
-  const [weather, setWeather] = useState<Weather | null>(null);
-  const [moodScore, setMoodScore] = useState(0);
-  const [memo, setMemo] = useState("");
-  const [savedJustNow, setSavedJustNow] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [selectedDate, setSelectedDate] = useState<string | null>(null);
+
+  const year = cursor.getFullYear();
+  const month = cursor.getMonth();
+  const monthStr = toMonthStr(cursor);
+  const isCurrentMonth = monthStr === todayMonth;
+  const isFutureMonth = monthStr > todayMonth;
 
   useEffect(() => {
-    async function loadToday() {
+    let cancelled = false;
+    async function load() {
+      setLoading(true);
+      setLoadError(null);
       try {
-        const res = await fetch(`/api/moods?date=${today}`);
+        const res = await fetch(`/api/moods?month=${monthStr}`);
         const json = await res.json();
-        const record: MoodRecord | undefined = json.data?.[0];
-        if (record) {
-          setExisting(record);
-          setWeather(record.weather);
-          setMoodScore(record.mood_score);
-          setMemo(record.memo ?? "");
-        }
+        if (!res.ok) throw new Error(json.error ?? "불러오기 실패");
+        if (!cancelled) setRecords(json.data ?? []);
       } catch {
-        setError("오늘의 기록을 불러오지 못했습니다.");
+        if (!cancelled) setLoadError("기록을 불러오지 못했습니다.");
       } finally {
-        setLoading(false);
+        if (!cancelled) setLoading(false);
       }
     }
-    loadToday();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    load();
+    return () => {
+      cancelled = true;
+    };
+  }, [monthStr]);
 
-  const theme = weather ? WEATHER_MAP[weather].theme : DEFAULT_THEME;
+  const recordsByDate = useMemo(() => {
+    const map = new Map<string, MoodRecord>();
+    for (const record of records) map.set(record.date, record);
+    return map;
+  }, [records]);
 
-  async function handleSave() {
-    if (!weather || !moodScore) {
-      setError("마음날씨와 오늘의 기분을 모두 선택해주세요.");
-      return;
-    }
-    setError(null);
-    setSaving(true);
-    try {
-      if (existing) {
-        const res = await fetch(`/api/moods/${existing.id}`, {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ weather, mood_score: moodScore, memo }),
-        });
-        if (!res.ok) throw new Error("수정 중 오류가 발생했습니다.");
-        const json = await res.json();
-        setExisting(json.data);
-      } else {
-        const res = await fetch(`/api/moods`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            date: today,
-            weather,
-            mood_score: moodScore,
-            memo,
-          }),
-        });
-        const json = await res.json();
-        if (res.status === 409) {
-          // 기능 5: 날짜 중복 확인
-          const confirmed = window.confirm(json.message);
-          if (confirmed) {
-            const putRes = await fetch(`/api/moods/${json.existingId}`, {
-              method: "PUT",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ weather, mood_score: moodScore, memo }),
-            });
-            const putJson = await putRes.json();
-            setExisting(putJson.data);
-          } else {
-            setSaving(false);
-            return;
-          }
-        } else if (!res.ok) {
-          throw new Error(json.error ?? "저장 중 오류가 발생했습니다.");
-        } else {
-          setExisting(json.data);
-        }
-      }
-      setSavedJustNow(true);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "알 수 없는 오류");
-    } finally {
-      setSaving(false);
-    }
+  const cells = useMemo(() => buildCalendarGrid(year, month), [year, month]);
+  const todayRecord = recordsByDate.get(today);
+
+  function handleSaved(saved: MoodRecord) {
+    setRecords((prev) => {
+      const without = prev.filter((r) => r.id !== saved.id && r.date !== saved.date);
+      return [...without, saved];
+    });
+    setSelectedDate(null);
   }
 
-  if (loading) {
-    return <p className="text-slate-400">불러오는 중...</p>;
+  function handleDeleted(id: string) {
+    setRecords((prev) => prev.filter((r) => r.id !== id));
+    setSelectedDate(null);
   }
 
   return (
-    <div
-      className={`-mx-4 -mt-6 min-h-[calc(100vh-4rem)] bg-gradient-to-b px-4 pt-8 pb-10 sm:rounded-3xl ${theme.gradient} ${theme.text}`}
-    >
-      <div className="mx-auto max-w-xl space-y-8">
-        <div>
-          <p className="text-sm opacity-70">{formatDisplayDate(today)}</p>
-          <h1 className="mt-1 text-2xl font-semibold">
-            오늘 당신의 마음 날씨는 어떤가요?
-          </h1>
-          {existing && (
-            <p className="mt-2 text-sm opacity-70">
-              오늘 이미 기록한 마음날씨가 있어요. 아래에서 수정할 수 있어요.
-            </p>
-          )}
-        </div>
-
-        <section>
-          <WeatherPicker value={weather} onChange={setWeather} />
-        </section>
-
-        <section>
-          <h2 className="mb-2 text-sm font-medium opacity-70">오늘의 기분</h2>
-          <MoodScoreSelector value={moodScore} onChange={setMoodScore} />
-        </section>
-
-        <section>
-          <label className="mb-2 block text-sm font-medium opacity-70">
-            오늘 하루는 어땠나요?
-          </label>
-          <textarea
-            value={memo}
-            onChange={(e) => setMemo(e.target.value)}
-            maxLength={200}
-            rows={3}
-            placeholder="한 줄로 짧게 남겨보세요 (선택)"
-            className="w-full resize-none rounded-2xl border border-black/10 bg-white/70 p-3 text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-900/20"
-          />
-        </section>
-
-        {error && <p className="text-sm text-red-600">{error}</p>}
-
-        <div className="flex items-center gap-3">
-          <button
-            type="button"
-            onClick={handleSave}
-            disabled={saving}
-            className="rounded-full bg-slate-900 px-6 py-2.5 font-medium text-white transition-opacity disabled:opacity-50"
-          >
-            {saving ? "저장 중..." : "기록하기"}
-          </button>
-          {savedJustNow && (
-            <Link
-              href="/calendar"
-              className="text-sm underline decoration-dotted underline-offset-4"
-            >
-              저장 완료! 캘린더에서 확인하기 →
-            </Link>
-          )}
-        </div>
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-2xl font-semibold">
+          오늘 당신의 마음 날씨는 어떤가요?
+        </h1>
+        <p className="mt-1 text-sm text-slate-500">
+          {todayRecord
+            ? `오늘은 ${WEATHER_MAP[todayRecord.weather].emoji} ${WEATHER_MAP[todayRecord.weather].label}으로 기록했어요. 날짜를 눌러 다른 날도 남겨보세요.`
+            : "날짜를 눌러 그날의 마음날씨를 기록해보세요."}
+        </p>
       </div>
+
+      <div className="flex items-center justify-between rounded-2xl border border-white/70 bg-white/80 backdrop-blur-sm p-3">
+        <button
+          type="button"
+          onClick={() => setCursor(new Date(year, month - 1, 1))}
+          className="rounded-full px-3 py-1 text-sm text-slate-500 hover:bg-slate-100"
+        >
+          ← 이전 달
+        </button>
+        <div className="flex items-center gap-2">
+          <h2 className="font-semibold">
+            {year}년 {month + 1}월
+          </h2>
+          {!isCurrentMonth && (
+            <button
+              type="button"
+              onClick={() => setCursor(new Date())}
+              className="rounded-full bg-slate-100 px-2 py-0.5 text-xs text-slate-600 hover:bg-slate-200"
+            >
+              오늘
+            </button>
+          )}
+        </div>
+        <button
+          type="button"
+          onClick={() => setCursor(new Date(year, month + 1, 1))}
+          disabled={isCurrentMonth || isFutureMonth}
+          className="rounded-full px-3 py-1 text-sm text-slate-500 hover:bg-slate-100 disabled:opacity-30 disabled:hover:bg-transparent"
+        >
+          다음 달 →
+        </button>
+      </div>
+
+      <div className="rounded-2xl border border-white/70 bg-white/80 backdrop-blur-sm p-3 sm:p-4">
+        <div className="grid grid-cols-7 gap-1 text-center text-xs text-slate-400">
+          {WEEKDAYS.map((w) => (
+            <div key={w} className="py-1">
+              {w}
+            </div>
+          ))}
+        </div>
+        <div className="grid grid-cols-7 gap-1">
+          {cells.map((day, idx) => {
+            if (day === null) return <div key={`blank-${idx}`} />;
+            const dateStr = `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+            const record = recordsByDate.get(dateStr);
+            const weather = record ? WEATHER_MAP[record.weather] : null;
+            const isFuture = dateStr > today;
+            const isToday = dateStr === today;
+
+            return (
+              <button
+                key={dateStr}
+                type="button"
+                disabled={isFuture}
+                onClick={() => setSelectedDate(dateStr)}
+                aria-label={
+                  record
+                    ? `${month + 1}월 ${day}일 ${weather?.label ?? ""} 기록 보기`
+                    : isFuture
+                      ? `${month + 1}월 ${day}일`
+                      : `${month + 1}월 ${day}일 기록하기`
+                }
+                className={`flex aspect-square flex-col items-center justify-center gap-0.5 rounded-xl text-xs transition-colors ${
+                  isFuture
+                    ? "cursor-not-allowed opacity-30"
+                    : "hover:bg-slate-100"
+                } ${isToday ? "ring-2 ring-slate-900" : ""}`}
+              >
+                <span
+                  className={isToday ? "font-semibold text-slate-900" : "text-slate-400"}
+                >
+                  {day}
+                </span>
+                <span className="text-lg leading-none sm:text-xl">
+                  {weather?.emoji ?? (isFuture ? "" : "·")}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+        {loading && (
+          <p className="mt-2 text-center text-xs text-slate-400">불러오는 중...</p>
+        )}
+        {loadError && (
+          <p className="mt-2 text-center text-xs text-red-600">{loadError}</p>
+        )}
+      </div>
+
+      {selectedDate && (
+        <MoodModal
+          key={selectedDate}
+          date={selectedDate}
+          record={recordsByDate.get(selectedDate) ?? null}
+          onClose={() => setSelectedDate(null)}
+          onSaved={handleSaved}
+          onDeleted={handleDeleted}
+        />
+      )}
     </div>
   );
 }

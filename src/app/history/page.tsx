@@ -75,7 +75,7 @@ export default function HistoryPage() {
     <div className="space-y-6">
       <h1 className="text-xl font-semibold">지난 마음 기록</h1>
 
-      <div className="space-y-3 rounded-2xl border border-slate-200 bg-white p-4">
+      <div className="space-y-3 rounded-2xl border border-white/70 bg-white/80 backdrop-blur-sm p-4">
         <input
           type="text"
           value={search}

@@ -13,7 +13,7 @@ export function MoodCard({ record, onEdit, onDelete }: MoodCardProps) {
   const weather = WEATHER_MAP[record.weather];
 
   return (
-    <div className="flex items-start justify-between gap-4 rounded-2xl border border-slate-200 bg-white p-4">
+    <div className="flex items-start justify-between gap-4 rounded-2xl border border-white/70 bg-white/80 backdrop-blur-sm p-4">
       <div className="flex gap-3">
         <span className="text-2xl" aria-hidden>
           {weather?.emoji ?? "❓"}

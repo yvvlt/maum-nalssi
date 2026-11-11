@@ -1,8 +1,10 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  /* 마음날씨는 밝고 감성적인 라이트 테마만 사용합니다. */
+  color-scheme: light;
+  --background: #e6f3ff; /* 하늘색 (배경 그림이 덮기 전 기본색) */
+  --foreground: #0f172a; /* slate-900 */
 }
 
 @theme inline {
@@ -12,15 +14,64 @@
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
-
 body {
   background: var(--background);
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
+}
+
+/* ---------- 하늘 그림 배경 ---------- */
+.sky-bg {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  overflow: hidden;
+  pointer-events: none;
+  background: linear-gradient(
+    180deg,
+    #a9d8ff 0%,
+    #cde9ff 30%,
+    #e8f5ff 62%,
+    #fff6ea 100%
+  );
+}
+
+.sky-sun {
+  position: absolute;
+  top: -12vmin;
+  right: -10vmin;
+  width: 55vmin;
+  height: 55vmin;
+  border-radius: 9999px;
+  background: radial-gradient(
+    circle,
+    rgba(255, 244, 200, 0.95) 0%,
+    rgba(255, 244, 200, 0.45) 35%,
+    rgba(255, 244, 200, 0) 70%
+  );
+}
+
+.sky-cloud {
+  position: absolute;
+  left: 0;
+  animation-name: sky-drift;
+  animation-timing-function: linear;
+  animation-iteration-count: infinite;
+  will-change: transform;
+}
+
+@keyframes sky-drift {
+  from {
+    transform: translateX(-30vw);
+  }
+  to {
+    transform: translateX(110vw);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sky-cloud {
+    animation: none;
+    transform: translateX(20vw);
+  }
 }
